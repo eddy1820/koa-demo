@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "WebSearch",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(if [ -f .env ])",
+      "Bash(then echo \"Found .env\")",
+      "Bash(cat:*)",
+      "Bash(else echo \"No .env file\")",
+      "Bash(fi)",
+      "Bash(tasklist:*)",
+      "Bash(powershell:*)",
+      "Bash(npx ts-node seed.ts)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker rmi:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(tree:*)"
+    ]
+  }
+}

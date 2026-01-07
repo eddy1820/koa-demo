@@ -9,3 +9,19 @@ yarn-error.log*
 .pnp.js
 
 .vscode/*
+
+# Environment variables
+.env
+
+# Build output
+dist/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# Docker
+.env.docker.local
+postgres-data/
