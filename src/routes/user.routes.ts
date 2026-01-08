@@ -18,6 +18,6 @@ router.use(jwt({
 router.post('/', validate(createUserSchema), userController.createUser);
 router.get('/', userController.getAllUsers);
 router.get('/:id', userController.getUserById);
-router.put('/:id', validate(updateUserSchema), userController.updateUser);
+router.put('/', validate(updateUserSchema), userController.updateUser);
 
 export default router;

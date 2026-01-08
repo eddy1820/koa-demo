@@ -362,20 +362,190 @@ docker system prune -a
 docker volume prune
 ```
 
+## 監控
+
+本專案整合了 Prometheus + Grafana 監控系統，可即時追蹤應用程式的健康狀態和效能指標。
+
+### 監控服務
+
+啟動 `npm run docker:dev` 後，會同時啟動以下監控服務：
+
+| 服務 | Port | 登入資訊 | 說明 |
+|------|------|---------|------|
+| **Grafana** | 3001 | admin / admin | 視覺化監控 Dashboard |
+| **Prometheus** | 9090 | - | 指標收集和儲存 |
+| **Metrics Endpoint** | 3000/metrics | - | 應用程式指標導出端點 |
+
+### 快速開始
+
+1. 啟動所有服務（包含監控）：
+```bash
+npm run docker:dev
+```
+
+2. 訪問 Grafana Dashboard：
+   - 開啟 http://localhost:3001
+   - 登入: `admin` / `admin`
+   - 預設 dashboard: "Koa Demo Application Monitoring"
+
+3. 訪問 Prometheus（進階用戶）：
+   - 開啟 http://localhost:9090
+   - 可直接查詢和探索指標
+
+4. 查看原始指標：
+   - 開啟 http://localhost:3000/metrics
+   - Prometheus 文字格式的指標
+
+### 收集的指標
+
+#### HTTP 指標
+- `koa_demo_http_requests_total` - HTTP 請求總數（按方法、路由、狀態碼）
+- `koa_demo_http_request_duration_seconds` - HTTP 請求延遲分布
+- `koa_demo_http_request_size_bytes` - HTTP 請求大小分布
+- `koa_demo_http_response_size_bytes` - HTTP 回應大小分布
+
+#### 資料庫指標
+- `koa_demo_db_queries_total` - 資料庫查詢總數（按類型和 entity）
+- `koa_demo_db_query_duration_seconds` - 資料庫查詢時間分布
+- `koa_demo_db_connection_pool_size` - 連線池大小
+- `koa_demo_db_connection_pool_active` - 活躍連線數
+
+#### 系統指標
+- `koa_demo_event_loop_lag_seconds` - Node.js Event Loop 延遲
+- `koa_demo_process_cpu_seconds_total` - CPU 使用時間
+- `koa_demo_process_resident_memory_bytes` - 記憶體使用量
+- `koa_demo_nodejs_heap_size_used_bytes` - Heap 記憶體使用量
+
+#### 業務指標
+- `koa_demo_user_registrations_total` - 用戶註冊總數
+- `koa_demo_user_logins_total` - 成功登入總數
+- `koa_demo_user_login_failures_total` - 登入失敗總數（按原因）
+
+### Dashboard 說明
+
+預配置的 Grafana Dashboard 包含 12 個 panels：
+
+1. **HTTP Request Rate** - 每秒 HTTP 請求數
+2. **HTTP Request Duration (95th percentile)** - 95% 請求延遲
+3. **HTTP Status Code Distribution** - 狀態碼分布圓餅圖
+4. **Database Query Rate** - 每秒資料庫查詢數
+5. **Database Query Duration (95th percentile)** - 95% 查詢延遲
+6. **Node.js Memory Usage** - 記憶體使用（RSS, Heap）
+7. **CPU Usage** - CPU 使用率百分比
+8. **Event Loop Lag** - Event Loop 延遲（Gauge）
+9. **Database Connection Pool** - 連線池狀態
+10. **User Registrations (24h)** - 24 小時內註冊數
+11. **User Logins (24h)** - 24 小時內登入數
+12. **Failed Login Attempts (24h)** - 24 小時內失敗登入數
+
+Dashboard 特性：
+- **自動刷新**: 每 10 秒更新一次
+- **即時資料**: 預設顯示最近 1 小時
+- **互動式**: 可點擊圖表深入探索
+
+### 監控故障排除
+
+#### Prometheus 無法抓取指標
+
+**症狀**: Prometheus Targets 頁面顯示 `app:3000` 為 DOWN
+
+**解決方法**:
+```bash
+# 1. 檢查所有容器狀態
+docker-compose ps
+
+# 2. 檢查 app 容器 logs
+docker-compose logs app
+
+# 3. 測試 metrics endpoint
+curl http://localhost:3000/metrics
+
+# 4. 重啟服務
+docker-compose restart app prometheus
+```
+
+#### Grafana Dashboard 無資料
+
+**症狀**: Dashboard 載入但所有 panel 顯示 "No data"
+
+**解決方法**:
+1. 檢查 Prometheus 是否正常抓取資料：
+   - 訪問 http://localhost:9090/targets
+   - 確認 `koa-demo-app` target 狀態為 UP
+
+2. 在 Grafana 中測試查詢：
+   - 進入任一 panel 編輯模式
+   - 執行查詢: `koa_demo_http_requests_total`
+   - 應該看到資料
+
+3. 產生一些流量：
+   ```bash
+   # 發送測試請求
+   curl http://localhost:3000/api/auth/login
+   ```
+
+4. 檢查時間範圍：
+   - Dashboard 右上角選擇 "Last 5 minutes"
+   - 確保有最近的資料
+
+#### Port 9090 或 3001 被佔用
+
+**解決方法**: 修改 docker-compose.yml 的 port mapping
+
+```yaml
+prometheus:
+  ports:
+    - "9091:9090"  # 改用 host port 9091
+
+grafana:
+  ports:
+    - "3002:3000"  # 改用 host port 3002
+```
+
+### 資料保留
+
+- **Prometheus**: 保留 30 天資料（可在 prometheus.yml 調整）
+- **Grafana**: Dashboard 配置和設定持久化在 `grafana_data` volume
+
+清除監控資料：
+```bash
+# 只清除監控資料
+docker volume rm koa-demo_prometheus_data koa-demo_grafana_data
+
+# 清除所有資料（包含資料庫）
+npm run docker:clean
+```
+
 ## 架構說明
 
 ### 服務架構
 
 ```
-┌─────────────────┐         ┌──────────────────┐
-│   Host Machine  │         │  Docker Network  │
-│                 │         │                  │
-│  Port 3000 ────────────> │  App Container   │
-│                 │         │  (Node.js)       │
-│  Port 5432 ────────────> │                  │
-│                 │         │  PostgreSQL      │
-└─────────────────┘         │  Container       │
-                            └──────────────────┘
+┌─────────────────────────────────────────┐
+│         Host Machine                     │
+│                                         │
+│  Port 3000 ─────> App Container         │
+│  Port 5432 ─────> PostgreSQL            │
+│  Port 9090 ─────> Prometheus            │
+│  Port 3001 ─────> Grafana               │
+│                                         │
+│         Docker Network                  │
+│  ┌──────────┐    ┌────────────┐        │
+│  │   App    │───>│ Prometheus │        │
+│  │ :3000    │    │   :9090    │        │
+│  │ /metrics │    └─────┬──────┘        │
+│  └────┬─────┘          │               │
+│       │                │               │
+│       │          ┌─────▼──────┐        │
+│       │          │  Grafana   │        │
+│       │          │   :3001    │        │
+│       │          └────────────┘        │
+│       │                                │
+│  ┌────▼──────┐                        │
+│  │ PostgreSQL│                        │
+│  │   :5432   │                        │
+│  └───────────┘                        │
+└─────────────────────────────────────────┘
 ```
 
 ### 資料持久化

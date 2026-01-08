@@ -8,13 +8,18 @@ import { DatabaseConfig } from '../config/database';
 
 const container = new Container();
 
-// Bind DataSource
+// Create singleton DatabaseConfig instance
+const databaseConfig = new DatabaseConfig();
+
+// Bind DatabaseConfig as singleton
+container
+  .bind<DatabaseConfig>(TYPES.DatabaseConfig)
+  .toConstantValue(databaseConfig);
+
+// Bind DataSource from the singleton DatabaseConfig
 container
   .bind<DataSource>(TYPES.DataSource)
-  .toDynamicValue(() => {
-    const dbConfig = new DatabaseConfig();
-    return dbConfig.getDataSource();
-  })
+  .toDynamicValue(() => databaseConfig.getDataSource())
   .inSingletonScope();
 
 // Bind all layers

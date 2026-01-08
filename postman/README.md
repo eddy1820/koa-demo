@@ -48,10 +48,10 @@
 
 | 方法 | 端點 | 說明 |
 |------|------|------|
-| POST | `/api/users` | 建立使用者資料 |
+| POST | `/api/users` | 建立使用者資料 (accountId 自動從 JWT 取得) |
 | GET | `/api/users` | 取得所有使用者 |
 | GET | `/api/users/:id` | 取得特定使用者 |
-| PUT | `/api/users/:id` | 更新使用者資料 |
+| PUT | `/api/users` | 更新當前使用者資料 (自動識別) |
 
 ## 使用流程
 
@@ -157,8 +157,7 @@ Authorization: Bearer {{token}}
 
 ### Update User
 - ✅ Success (200)
-- ❌ Forbidden - Not Owner (403)
-- ❌ Not Found (404)
+- ❌ Not Found (404) - 尚未建立 user profile
 - ❌ Validation Error (400)
 
 ## 驗證規則
@@ -171,7 +170,7 @@ Authorization: Bearer {{token}}
 - **Username**: 3-50 字元，只能包含英數字、底線、連字號
 - **Age**: 13-120
 - **Gender**: `male`, `female`, 或 `other`
-- **AccountId**: 必須是有效的 account ID (僅 Create User 需要)
+- **AccountId**: 自動從 JWT token 取得，無需傳入
 
 ## 常見問題
 

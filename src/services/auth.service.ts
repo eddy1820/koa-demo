@@ -3,25 +3,38 @@ import { TYPES } from '../container/identifiers';
 import { IAccountRepository } from '../repositories/interfaces/IAccountRepository';
 import { IRateLimiterService } from './interfaces/IRateLimiterService';
 import { IAuthService } from './interfaces/IAuthService';
+import { MetricsService } from './metrics.service';
 import { hashPassword, comparePassword } from '../utils/password.util';
 import { generateToken } from '../utils/jwt.util';
+import {
+  AccountAlreadyExistsError,
+  AccountLockedError,
+  InvalidCredentialsError,
+  TooManyAttemptsError,
+} from '../errors/AppError';
 
 @injectable()
 export class AuthService implements IAuthService {
   constructor(
     @inject(TYPES.IAccountRepository) private accountRepository: IAccountRepository,
-    @inject(TYPES.IRateLimiterService) private rateLimiter: IRateLimiterService
+    @inject(TYPES.IRateLimiterService) private rateLimiter: IRateLimiterService,
+    @inject(TYPES.IMetricsService) private metricsService: MetricsService
   ) {}
 
   async register(email: string, password: string) {
     const existing = await this.accountRepository.findByEmail(email);
     if (existing) {
-      throw new Error('Account already exists');
+      // Track duplicate registration attempt
+      this.metricsService.userRegistrationTotal.inc({ status: 'duplicate' });
+      throw new AccountAlreadyExistsError();
     }
 
     const hashedPassword = await hashPassword(password);
     const account = await this.accountRepository.create(email, hashedPassword);
     const token = generateToken({ id: account.id, email: account.email });
+
+    // Track successful registration
+    this.metricsService.userRegistrationTotal.inc({ status: 'success' });
 
     return {
       user: {
@@ -37,17 +50,27 @@ export class AuthService implements IAuthService {
     // 1. 先檢查是否已被鎖定
     const isBlocked = await this.rateLimiter.isBlocked(email);
     if (isBlocked) {
-      throw new Error(
-        'Account is locked due to too many failed login attempts. Please try again after 15 minutes.'
-      );
+      // Track account locked failure
+      this.metricsService.userLoginFailedTotal.inc({ reason: 'account_locked' });
+      throw new AccountLockedError();
     }
 
     // 2. 查找帳號
     const account = await this.accountRepository.findByEmail(email);
     if (!account) {
       // Email 不存在也要記錄失敗（防止用戶枚舉）
-      const remaining = await this.rateLimiter.consumeLoginAttempt(email);
-      throw new Error(`Invalid credentials. ${remaining} attempts remaining.`);
+      try {
+        const remaining = await this.rateLimiter.consumeLoginAttempt(email);
+        // Track invalid credentials failure
+        this.metricsService.userLoginFailedTotal.inc({ reason: 'invalid_credentials' });
+        throw new InvalidCredentialsError(remaining);
+      } catch (error) {
+        if (error instanceof TooManyAttemptsError) {
+          this.metricsService.userLoginFailedTotal.inc({ reason: 'account_locked' });
+          throw new AccountLockedError();
+        }
+        throw error;
+      }
     }
 
     // 3. 驗證密碼
@@ -56,24 +79,26 @@ export class AuthService implements IAuthService {
       // 密碼錯誤，記錄失敗次數
       try {
         const remaining = await this.rateLimiter.consumeLoginAttempt(email);
-        throw new Error(
-          `Invalid credentials. ${remaining} attempts remaining.`
-        );
-      } catch (err: any) {
-        // 如果是 rate limiter 拋出的錯誤（已鎖定）
-        if (err.message.includes('too many failed login attempts')) {
-          throw err;
+        // Track invalid credentials failure
+        this.metricsService.userLoginFailedTotal.inc({ reason: 'invalid_credentials' });
+        throw new InvalidCredentialsError(remaining);
+      } catch (error) {
+        // 如果是 rate limiter 拋出的 TooManyAttemptsError（已鎖定）
+        if (error instanceof TooManyAttemptsError) {
+          this.metricsService.userLoginFailedTotal.inc({ reason: 'account_locked' });
+          throw new AccountLockedError();
         }
-        // 否則拋出帶剩餘次數的錯誤
-        throw new Error(
-          `Invalid credentials. 0 attempts remaining. Account locked.`
-        );
+        // 如果是 InvalidCredentialsError，直接拋出
+        throw error;
       }
     }
 
     // 4. 密碼正確，重置失敗計數器並生成 token
     await this.rateLimiter.resetLoginAttempts(email);
     const token = generateToken({ id: account.id, email: account.email });
+
+    // Track successful login
+    this.metricsService.userLoginTotal.inc();
 
     return {
       user: {

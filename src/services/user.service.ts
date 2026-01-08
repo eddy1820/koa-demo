@@ -4,6 +4,13 @@ import { IUserRepository } from '../repositories/interfaces/IUserRepository';
 import { IAccountRepository } from '../repositories/interfaces/IAccountRepository';
 import { IUserService } from './interfaces/IUserService';
 import { CreateUserInput, UpdateUserInput } from '../schemas/user.schema';
+import {
+  AccountNotFoundError,
+  UserNotFoundError,
+  UserProfileNotFoundError,
+  UsernameAlreadyExistsError,
+  UserProfileAlreadyExistsError,
+} from '../errors/AppError';
 
 @injectable()
 export class UserService implements IUserService {
@@ -12,27 +19,30 @@ export class UserService implements IUserService {
     @inject(TYPES.IAccountRepository) private accountRepository: IAccountRepository
   ) {}
 
-  async createUser(data: CreateUserInput) {
-    const account = await this.accountRepository.findById(data.accountId);
+  async createUser(data: CreateUserInput, accountId: number) {
+    const account = await this.accountRepository.findById(accountId);
     if (!account) {
-      throw new Error('Account not found');
+      throw new AccountNotFoundError();
     }
 
     const existingUserByAccount = await this.userRepository.findByAccountId(
-      data.accountId
+      accountId
     );
     if (existingUserByAccount) {
-      throw new Error('Account already has a user profile');
+      throw new UserProfileAlreadyExistsError();
     }
 
     const existingUserByUsername = await this.userRepository.findByUsername(
       data.username
     );
     if (existingUserByUsername) {
-      throw new Error('Username already exists');
+      throw new UsernameAlreadyExistsError();
     }
 
-    const user = await this.userRepository.create(data);
+    const user = await this.userRepository.create({
+      ...data,
+      accountId,
+    });
 
     return {
       id: user.id,
@@ -48,7 +58,7 @@ export class UserService implements IUserService {
   async getUserById(id: number) {
     const user = await this.userRepository.findById(id);
     if (!user) {
-      throw new Error('User not found');
+      throw new UserNotFoundError();
     }
 
     return {
@@ -76,26 +86,22 @@ export class UserService implements IUserService {
     }));
   }
 
-  async updateUser(id: number, data: UpdateUserInput, requestingUserId: number) {
-    const user = await this.userRepository.findById(id);
+  async updateUser(data: UpdateUserInput, accountId: number) {
+    const user = await this.userRepository.findByAccountId(accountId);
     if (!user) {
-      throw new Error('User not found');
-    }
-
-    if (user.accountId !== requestingUserId) {
-      throw new Error('Unauthorized to update this user');
+      throw new UserProfileNotFoundError();
     }
 
     if (data.username && data.username !== user.username) {
       const existingUser = await this.userRepository.findByUsername(data.username);
       if (existingUser) {
-        throw new Error('Username already exists');
+        throw new UsernameAlreadyExistsError();
       }
     }
 
-    const updatedUser = await this.userRepository.update(id, data);
+    const updatedUser = await this.userRepository.update(user.id, data);
     if (!updatedUser) {
-      throw new Error('Failed to update user');
+      throw new UserNotFoundError('Failed to update user');
     }
 
     return {

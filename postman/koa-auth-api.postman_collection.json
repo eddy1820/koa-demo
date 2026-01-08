@@ -256,14 +256,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"johndoe\",\n  \"age\": 25,\n  \"gender\": \"male\",\n  \"accountId\": 1\n}"
+              "raw": "{\n  \"username\": \"johndoe\",\n  \"age\": 25,\n  \"gender\": \"male\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/users",
               "host": ["{{baseUrl}}"],
               "path": ["users"]
             },
-            "description": "Create a new user profile. Requires JWT authentication. Username must be 3-50 chars (alphanumeric, underscore, hyphen only), age 13-120, gender: male/female/other."
+            "description": "Create a new user profile. accountId is automatically obtained from JWT token. Username must be 3-50 chars (alphanumeric, underscore, hyphen only), age 13-120, gender: male/female/other."
           },
           "response": [
             {
@@ -282,7 +282,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"username\": \"johndoe\",\n  \"age\": 25,\n  \"gender\": \"male\",\n  \"accountId\": 1\n}"
+                  "raw": "{\n  \"username\": \"johndoe\",\n  \"age\": 25,\n  \"gender\": \"male\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users",
@@ -313,7 +313,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"username\": \"johndoe\",\n  \"age\": 25,\n  \"gender\": \"male\",\n  \"accountId\": 1\n}"
+                  "raw": "{\n  \"username\": \"johndoe\",\n  \"age\": 25,\n  \"gender\": \"male\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users",
@@ -556,11 +556,11 @@
               "raw": "{\n  \"username\": \"johndoe_updated\",\n  \"age\": 26\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/users/1",
+              "raw": "{{baseUrl}}/users",
               "host": ["{{baseUrl}}"],
-              "path": ["users", "1"]
+              "path": ["users"]
             },
-            "description": "Update a user profile. Users can only update their own profile (accountId from JWT must match). All fields are optional."
+            "description": "Update current user's profile. System automatically identifies the user from JWT token. All fields are optional."
           },
           "response": [
             {
@@ -582,9 +582,9 @@
                   "raw": "{\n  \"username\": \"johndoe_updated\",\n  \"age\": 26\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/users/1",
+                  "raw": "{{baseUrl}}/users",
                   "host": ["{{baseUrl}}"],
-                  "path": ["users", "1"]
+                  "path": ["users"]
                 }
               },
               "status": "OK",
@@ -597,41 +597,6 @@
                 }
               ],
               "body": "{\n  \"success\": true,\n  \"message\": \"User updated successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"username\": \"johndoe_updated\",\n    \"age\": 26,\n    \"gender\": \"male\",\n    \"accountId\": 1,\n    \"createdAt\": \"2026-01-07T10:00:00.000Z\",\n    \"updatedAt\": \"2026-01-07T12:00:00.000Z\"\n  }\n}"
-            },
-            {
-              "name": "Forbidden (Not Owner)",
-              "originalRequest": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{token}}"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"username\": \"hacked\"\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/users/2",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["users", "2"]
-                }
-              },
-              "status": "Forbidden",
-              "code": 403,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"You can only update your own profile\"\n}"
             },
             {
               "name": "Not Found",
@@ -652,9 +617,9 @@
                   "raw": "{\n  \"username\": \"newname\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/users/999",
+                  "raw": "{{baseUrl}}/users",
                   "host": ["{{baseUrl}}"],
-                  "path": ["users", "999"]
+                  "path": ["users"]
                 }
               },
               "status": "Not Found",
@@ -666,7 +631,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"User not found\"\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"User profile not found. Please create a profile first.\"\n}"
             },
             {
               "name": "Validation Error",
@@ -687,9 +652,9 @@
                   "raw": "{\n  \"age\": 200\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/users/1",
+                  "raw": "{{baseUrl}}/users",
                   "host": ["{{baseUrl}}"],
-                  "path": ["users", "1"]
+                  "path": ["users"]
                 }
               },
               "status": "Bad Request",

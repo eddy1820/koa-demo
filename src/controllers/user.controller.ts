@@ -4,6 +4,7 @@ import { TYPES } from '../container/identifiers';
 import { IUserService } from '../services/interfaces/IUserService';
 import { success, error } from '../utils/response.util';
 import { CreateUserInput, UpdateUserInput } from '../schemas/user.schema';
+import { AppError, InvalidUserIdError } from '../errors/AppError';
 
 @injectable()
 export class UserController {
@@ -13,19 +14,17 @@ export class UserController {
 
   createUser = async (ctx: Context) => {
     try {
+      const accountId = ctx.state.user.id;
       const data = ctx.request.body as CreateUserInput;
-      const result = await this.userService.createUser(data);
+      const result = await this.userService.createUser(data, accountId);
       success(ctx, result, 'User created successfully', 201);
-    } catch (err: any) {
-      if (err.message === 'Account not found') {
-        error(ctx, err.message, 404);
-      } else if (
-        err.message === 'Username already exists' ||
-        err.message === 'Account already has a user profile'
-      ) {
-        error(ctx, err.message, 409);
-      } else {
+    } catch (err) {
+      if (err instanceof AppError) {
+        error(ctx, err.message, err.statusCode);
+      } else if (err instanceof Error) {
         error(ctx, err.message, 500);
+      } else {
+        error(ctx, 'An unexpected error occurred', 500);
       }
     }
   };
@@ -35,17 +34,18 @@ export class UserController {
       const id = parseInt(ctx.params.id, 10);
 
       if (isNaN(id)) {
-        error(ctx, 'Invalid user ID', 400);
-        return;
+        throw new InvalidUserIdError();
       }
 
       const result = await this.userService.getUserById(id);
       success(ctx, result, 'User retrieved successfully');
-    } catch (err: any) {
-      if (err.message === 'User not found') {
-        error(ctx, err.message, 404);
-      } else {
+    } catch (err) {
+      if (err instanceof AppError) {
+        error(ctx, err.message, err.statusCode);
+      } else if (err instanceof Error) {
         error(ctx, err.message, 500);
+      } else {
+        error(ctx, 'An unexpected error occurred', 500);
       }
     }
   };
@@ -54,34 +54,31 @@ export class UserController {
     try {
       const result = await this.userService.getAllUsers();
       success(ctx, result, 'Users retrieved successfully');
-    } catch (err: any) {
-      error(ctx, err.message, 500);
+    } catch (err) {
+      if (err instanceof AppError) {
+        error(ctx, err.message, err.statusCode);
+      } else if (err instanceof Error) {
+        error(ctx, err.message, 500);
+      } else {
+        error(ctx, 'An unexpected error occurred', 500);
+      }
     }
   };
 
   updateUser = async (ctx: Context) => {
     try {
-      const id = parseInt(ctx.params.id, 10);
-
-      if (isNaN(id)) {
-        error(ctx, 'Invalid user ID', 400);
-        return;
-      }
-
+      const accountId = ctx.state.user.id;
       const data = ctx.request.body as UpdateUserInput;
-      const requestingUserId = ctx.state.user.id;
 
-      const result = await this.userService.updateUser(id, data, requestingUserId);
+      const result = await this.userService.updateUser(data, accountId);
       success(ctx, result, 'User updated successfully');
-    } catch (err: any) {
-      if (err.message === 'User not found') {
-        error(ctx, err.message, 404);
-      } else if (err.message === 'Unauthorized to update this user') {
-        error(ctx, err.message, 403);
-      } else if (err.message === 'Username already exists') {
-        error(ctx, err.message, 409);
-      } else {
+    } catch (err) {
+      if (err instanceof AppError) {
+        error(ctx, err.message, err.statusCode);
+      } else if (err instanceof Error) {
         error(ctx, err.message, 500);
+      } else {
+        error(ctx, 'An unexpected error occurred', 500);
       }
     }
   };

@@ -2,7 +2,7 @@ import { injectable, inject } from 'inversify';
 import { DataSource, Repository } from 'typeorm';
 import { TYPES } from '../container/identifiers';
 import { User, Gender } from '../entities/User.entity';
-import { CreateUserInput, UpdateUserInput } from '../schemas/user.schema';
+import { CreateUserData, UpdateUserInput } from '../schemas/user.schema';
 import { IUserRepository } from './interfaces/IUserRepository';
 
 @injectable()
@@ -31,7 +31,7 @@ export class UserRepository implements IUserRepository {
     return this.repository.findOne({ where: { accountId } });
   }
 
-  async create(data: CreateUserInput): Promise<User> {
+  async create(data: CreateUserData): Promise<User> {
     const user = this.repository.create({
       username: data.username,
       age: data.age,
@@ -42,24 +42,14 @@ export class UserRepository implements IUserRepository {
   }
 
   async update(id: number, data: UpdateUserInput): Promise<User | null> {
-    const updateData: any = {};
+    const updateData: Partial<User> = {};
     if (data.username !== undefined) updateData.username = data.username;
     if (data.age !== undefined) updateData.age = data.age;
-    if (data.gender !== undefined) updateData.gender = data.gender;
+    if (data.gender !== undefined) updateData.gender = data.gender as Gender;
 
     if (Object.keys(updateData).length > 0) {
       await this.repository.update(id, updateData);
     }
     return this.findById(id);
-  }
-
-  async delete(id: number): Promise<boolean> {
-    const result = await this.repository.delete(id);
-    return result.affected !== 0;
-  }
-
-  async exists(id: number): Promise<boolean> {
-    const count = await this.repository.count({ where: { id } });
-    return count > 0;
   }
 }

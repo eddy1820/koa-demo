@@ -1,6 +1,7 @@
 import { injectable } from 'inversify';
-import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
 import { IRateLimiterService } from './interfaces/IRateLimiterService';
+import { TooManyAttemptsError } from '../errors/AppError';
 
 @injectable()
 export class RateLimiterService implements IRateLimiterService {
@@ -11,7 +12,7 @@ export class RateLimiterService implements IRateLimiterService {
       points: 3, // 最多 3 次嘗試
       duration: 60 * 15, // 15 分鐘（900 秒）
       blockDuration: 60 * 15, // 鎖定 15 分鐘
-    })
+    });
   }
 
   async consumeLoginAttempt(key: string): Promise<number> {
@@ -19,15 +20,16 @@ export class RateLimiterService implements IRateLimiterService {
       const result = await this.rateLimiter.consume(key, 1);
       // result.remainingPoints 是剩餘次數
       return result.remainingPoints;
-    } catch (rejRes: any) {
+    } catch (rejRes) {
       // 當 remainingPoints < 0 時會拋出錯誤
       if (rejRes instanceof Error) {
         throw rejRes;
       }
       // rejRes 是 RateLimiterRes 物件
-      throw new Error(
-        'Too many failed login attempts. Please try again later.'
-      );
+      if (rejRes instanceof RateLimiterRes || (rejRes && typeof rejRes === 'object')) {
+        throw new TooManyAttemptsError();
+      }
+      throw rejRes;
     }
   }
 

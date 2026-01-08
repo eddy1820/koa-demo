@@ -2,7 +2,10 @@ import { CreateUserInput, UpdateUserInput } from '../../schemas/user.schema';
 import { Gender } from '../../entities/User.entity';
 
 export interface IUserService {
-  createUser(data: CreateUserInput): Promise<{
+  createUser(
+    data: CreateUserInput,
+    accountId: number
+  ): Promise<{
     id: number;
     username: string;
     age: number;
@@ -35,9 +38,8 @@ export interface IUserService {
   >;
 
   updateUser(
-    id: number,
     data: UpdateUserInput,
-    requestingUserId: number
+    accountId: number
   ): Promise<{
     id: number;
     username: string;

@@ -4,6 +4,7 @@ import { TYPES } from '../container/identifiers';
 import { IAuthService } from '../services/interfaces/IAuthService';
 import { success, error } from '../utils/response.util';
 import { RegisterInput, LoginInput } from '../schemas/auth.schema';
+import { AppError } from '../errors/AppError';
 
 @injectable()
 export class AuthController {
@@ -16,11 +17,13 @@ export class AuthController {
       const { email, password } = ctx.request.body as RegisterInput;
       const result = await this.authService.register(email, password);
       success(ctx, result, 'Registration successful', 201);
-    } catch (err: any) {
-      if (err.message === 'Account already exists') {
-        error(ctx, err.message, 409);
-      } else {
+    } catch (err) {
+      if (err instanceof AppError) {
+        error(ctx, err.message, err.statusCode);
+      } else if (err instanceof Error) {
         error(ctx, err.message, 500);
+      } else {
+        error(ctx, 'An unexpected error occurred', 500);
       }
     }
   };
@@ -30,23 +33,14 @@ export class AuthController {
       const { email, password } = ctx.request.body as LoginInput;
       const result = await this.authService.login(email, password);
       success(ctx, result, 'Login successful');
-    } catch (err: any) {
-      const message = err.message;
-
-      // 1. 帳號已鎖定
-      if (message.includes('Account is locked')) {
-        error(ctx, message, 429); // 429 Too Many Requests
-        return;
+    } catch (err) {
+      if (err instanceof AppError) {
+        error(ctx, err.message, err.statusCode);
+      } else if (err instanceof Error) {
+        error(ctx, err.message, 500);
+      } else {
+        error(ctx, 'An unexpected error occurred', 500);
       }
-
-      // 2. 密碼錯誤（帶剩餘次數）
-      if (message.includes('Invalid credentials')) {
-        error(ctx, message, 401); // 401 Unauthorized
-        return;
-      }
-
-      // 3. 其他錯誤
-      error(ctx, message, 500);
     }
   };
 }

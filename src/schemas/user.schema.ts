@@ -15,10 +15,6 @@ export const createUserSchema = z.object({
     .min(13, 'Age must be at least 13')
     .max(120, 'Age must not exceed 120'),
   gender: z.enum(['male', 'female', 'other']),
-  accountId: z
-    .number()
-    .int('Account ID must be an integer')
-    .positive('Account ID must be a positive number'),
 });
 
 export const updateUserSchema = z.object({
@@ -42,3 +38,8 @@ export const updateUserSchema = z.object({
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+
+// Internal type used by repository layer (includes accountId from JWT)
+export type CreateUserData = CreateUserInput & {
+  accountId: number;
+};
