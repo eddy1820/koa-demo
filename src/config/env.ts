@@ -14,7 +14,18 @@ const envSchema = z.object({
   DB_NAME: z.string(),
 
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-  JWT_EXPIRES_IN: z.string().default('24h'),
+  JWT_EXPIRES_IN: z
+    .string()
+    .default('86400')
+    .transform((val) => {
+      // 如果是純數字字符串，轉換為數字
+      const num = Number(val);
+      if (!isNaN(num)) {
+        return num;
+      }
+      // 否則保持字符串格式（如 "24h", "7d"）
+      return val;
+    }), // JWT expiration: number (seconds) or string ("24h", "7d")
 
   CORS_ORIGIN: z.string().default('*'),
 });

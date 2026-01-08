@@ -41,7 +41,7 @@ export class DatabaseConfig {
       try {
         const metricsService = container.get<MetricsService>(TYPES.IMetricsService);
 
-        // Type assertion for PostgreSQL driver with connection pool
+        // Type guard for PostgreSQL driver with connection pool
         interface PostgresDriver {
           master?: {
             pool?: {
@@ -51,10 +51,20 @@ export class DatabaseConfig {
           };
         }
 
-        const driver = this.dataSource.driver as unknown as PostgresDriver;
+        function isPostgresDriver(driver: unknown): driver is PostgresDriver {
+          return (
+            typeof driver === 'object' &&
+            driver !== null &&
+            'master' in driver &&
+            typeof (driver as PostgresDriver).master === 'object' &&
+            (driver as PostgresDriver).master?.pool !== undefined
+          );
+        }
 
-        // Get connection pool information
-        if (driver.master?.pool) {
+        const driver = this.dataSource.driver;
+
+        // Get connection pool information using type guard
+        if (isPostgresDriver(driver) && driver.master?.pool) {
           const pool = driver.master.pool;
 
           // Total pool size

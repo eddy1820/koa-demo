@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Gender } from '../entities/User.entity';
 
 export const createUserSchema = z.object({
   username: z
@@ -14,7 +15,7 @@ export const createUserSchema = z.object({
     .int('Age must be an integer')
     .min(13, 'Age must be at least 13')
     .max(120, 'Age must not exceed 120'),
-  gender: z.enum(['male', 'female', 'other']),
+  gender: z.nativeEnum(Gender),
 });
 
 export const updateUserSchema = z.object({
@@ -33,7 +34,7 @@ export const updateUserSchema = z.object({
     .min(13, 'Age must be at least 13')
     .max(120, 'Age must not exceed 120')
     .optional(),
-  gender: z.enum(['male', 'female', 'other']).optional(),
+  gender: z.enum(Gender).optional(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;

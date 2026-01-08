@@ -77,6 +77,28 @@ Environment variables are validated at startup using Zod schema in `src/config/e
 - Database connection (PostgreSQL on port 5432)
 - JWT secret (minimum 32 characters)
 - Server port (default 3000)
+- JWT expiration time (supports both numeric seconds and string format like "24h", "7d")
+
+#### JWT_EXPIRES_IN Configuration
+
+The `JWT_EXPIRES_IN` environment variable supports flexible formats:
+
+**Numeric format (seconds)**:
+```bash
+JWT_EXPIRES_IN=86400  # 24 hours in seconds
+```
+
+**String format (time expressions)**:
+```bash
+JWT_EXPIRES_IN=24h    # 24 hours
+JWT_EXPIRES_IN=7d     # 7 days
+JWT_EXPIRES_IN=30m    # 30 minutes
+```
+
+The configuration automatically detects the format:
+- Pure numeric strings are converted to numbers
+- Time expression strings are preserved as-is
+- Both formats work seamlessly with the jsonwebtoken library
 
 ### Database
 
@@ -249,10 +271,54 @@ try {
 
 ### TypeScript Best Practices
 
+The codebase follows strict TypeScript best practices for maximum type safety:
+
 - **No `any` types**: All code uses proper TypeScript types
+  - Error handlers use `instanceof` checks instead of `error: any`
+  - Zod validation errors properly typed with `ZodError`
+  - Database drivers use type guards for safe property access
+
 - **Custom error classes**: Type-safe error handling with `instanceof` checks
+  - `src/types/errors.ts` defines type guards like `isKoaJwtError()`
+  - Controllers check error types before handling
+
 - **Type interfaces**: Proper interfaces for TypeORM events, database drivers
+  - PostgreSQL driver uses type guards: `isPostgresDriver()`
+  - Type-safe access to connection pool properties
+
 - **Strict types**: Repository methods use `Partial<User>` instead of `any`
+  - No type assertions where Zod validation provides type safety
+  - Gender enum properly integrated with Zod schemas
+
+### Type Safety Improvements (2026-01-08)
+
+Recent improvements to eliminate type safety issues:
+
+1. **Context State Null Safety**
+   - Added `ctx.state.user?.id` checks in controllers
+   - Prevents runtime errors if JWT middleware fails
+   - Files: `src/controllers/user.controller.ts`
+
+2. **Zod Validation Type Safety**
+   - Removed `error: any` from validator middleware
+   - Uses `instanceof ZodError` for proper type checking
+   - Returns `error.issues` instead of `error.errors`
+   - Files: `src/middlewares/validator.middleware.ts`
+
+3. **Enum Integration**
+   - Zod schemas use `z.nativeEnum(Gender)` instead of `z.enum(['male', 'female', 'other'])`
+   - Ensures Zod validation matches TypeORM entity enum
+   - Eliminates redundant type assertions in repositories
+   - Files: `src/schemas/user.schema.ts`, `src/repositories/user.repository.ts`
+
+4. **Database Driver Type Guards**
+   - PostgreSQL driver access uses type guards for safety
+   - No unsafe `as unknown as PostgresDriver` casts
+   - Files: `src/config/database.ts`
+
+5. **Error Type Definitions**
+   - Custom type guards for JWT and Zod errors
+   - Files: `src/types/errors.ts`, `src/middlewares/error.middleware.ts`
 
 ### Type Definitions
 
@@ -260,6 +326,8 @@ try {
 - `CreateUserData`: Internal type with accountId for repository layer
 - `UpdateUserInput`: Optional fields for profile updates
 - `JwtPayload`: JWT token payload structure
+- `KoaJwtError`: Type guard for koa-jwt errors
+- `ZodValidationError`: Type guard for Zod validation errors
 
 ## Application Lifecycle
 

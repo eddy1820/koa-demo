@@ -1,10 +1,10 @@
 {
   "info": {
     "name": "Koa Auth API",
-    "description": "Authentication API with JWT using Koa.js, TypeORM, and PostgreSQL\n\n## Tech Stack\n- **Framework**: Koa.js (Node.js)\n- **Database**: PostgreSQL 16\n- **ORM**: TypeORM\n- **Authentication**: JWT (JSON Web Tokens)\n- **Validation**: Zod\n- **Containerization**: Docker & Docker Compose\n\n## Quick Start\n\n### Using Docker (Recommended)\n```bash\nnpm install\nnpm run docker:dev\n```\nServer will be available at: http://localhost:3000\n\n### Local Development\n1. Install PostgreSQL 16\n2. Configure `.env` file\n3. Run `npm install && npm run dev`\n\n## Authentication Flow\n1. **Register** - Create new account (returns JWT token)\n2. **Login** - Authenticate existing account (returns JWT token)\n3. Use the token in `Authorization: Bearer <token>` header for protected routes\n\n## Collection Variables\n- `baseUrl`: API base URL (default: http://localhost:3000/api)\n- `token`: JWT token (auto-saved after Register/Login)\n\n## Notes\n- All `/api/users` routes require JWT authentication\n- Tokens are automatically saved to collection variable after successful login/register\n- Password requirements: min 8 chars, must include uppercase, lowercase, and number",
+    "description": "Authentication API with JWT using Koa.js, TypeORM, and PostgreSQL\n\n## Tech Stack\n- **Framework**: Koa.js (Node.js)\n- **Database**: PostgreSQL 16\n- **ORM**: TypeORM\n- **Authentication**: JWT (JSON Web Tokens)\n- **Validation**: Zod (with native TypeScript enum support)\n- **Containerization**: Docker & Docker Compose\n- **Monitoring**: Prometheus + Grafana\n\n## Quick Start\n\n### Using Docker (Recommended)\n```bash\nnpm install\nnpm run docker:dev\n```\nServer will be available at: http://localhost:3000\n\n### Local Development\n1. Install PostgreSQL 16\n2. Configure `.env` file (copy from `.env.example`)\n3. Run `npm install && npm run dev`\n\n## Authentication Flow\n1. **Register** - Create new account (returns JWT token)\n2. **Login** - Authenticate existing account (returns JWT token)\n3. **Create User Profile** - Create profile with username, age, gender (requires JWT)\n4. Use the token in `Authorization: Bearer <token>` header for all `/api/users` routes\n\n## Collection Variables\n- `baseUrl`: API base URL (default: http://localhost:3000/api)\n- `token`: JWT token (auto-saved after Register/Login)\n\n## Type Safety Features (Updated 2026-01-08)\n- **Zero `any` types**: All error handlers use proper TypeScript types\n- **Null-safe controllers**: JWT context state validated before use\n- **Enum validation**: Zod schemas use native TypeScript enums for type safety\n- **Proper error types**: Validation errors return `issues` array with detailed info\n\n## Notes\n- All `/api/users` routes require JWT authentication\n- Tokens are automatically saved to collection variable after successful login/register\n- Password requirements: min 8 chars, must include uppercase, lowercase, and number\n- Gender must be one of: `male`, `female`, `other` (TypeScript enum)\n- JWT_EXPIRES_IN supports both numeric (86400) and string formats (\"24h\", \"7d\")",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_postman_id": "koa-auth-api-collection",
-    "version": "2.0.0"
+    "version": "2.1.0"
   },
   "variable": [
     {
@@ -137,7 +137,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    {\n      \"code\": \"invalid_string\",\n      \"validation\": \"email\",\n      \"path\": [\"email\"],\n      \"message\": \"Invalid email format\"\n    },\n    {\n      \"code\": \"too_small\",\n      \"minimum\": 8,\n      \"path\": [\"password\"],\n      \"message\": \"Password must be at least 8 characters\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    {\n      \"code\": \"invalid_string\",\n      \"validation\": \"email\",\n      \"path\": [\"email\"],\n      \"message\": \"Invalid email format\"\n    },\n    {\n      \"code\": \"too_small\",\n      \"minimum\": 8,\n      \"inclusive\": true,\n      \"exact\": false,\n      \"type\": \"string\",\n      \"path\": [\"password\"],\n      \"message\": \"Password must be at least 8 characters\"\n    }\n  ]\n}"
             }
           ]
         },
@@ -330,7 +330,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"Authentication token missing or invalid\"\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired token\"\n}"
             },
             {
               "name": "Validation Error",
@@ -365,7 +365,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    {\n      \"code\": \"too_small\",\n      \"minimum\": 3,\n      \"path\": [\"username\"],\n      \"message\": \"Username must be at least 3 characters\"\n    },\n    {\n      \"code\": \"too_small\",\n      \"minimum\": 13,\n      \"path\": [\"age\"],\n      \"message\": \"Age must be at least 13\"\n    },\n    {\n      \"code\": \"invalid_enum_value\",\n      \"path\": [\"gender\"],\n      \"message\": \"Gender must be one of: male, female, other\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    {\n      \"code\": \"too_small\",\n      \"minimum\": 3,\n      \"inclusive\": true,\n      \"exact\": false,\n      \"type\": \"string\",\n      \"path\": [\"username\"],\n      \"message\": \"Username must be at least 3 characters\"\n    },\n    {\n      \"origin\": \"number\",\n      \"code\": \"too_small\",\n      \"minimum\": 13,\n      \"inclusive\": true,\n      \"exact\": false,\n      \"path\": [\"age\"],\n      \"message\": \"Age must be at least 13\"\n    },\n    {\n      \"code\": \"invalid_value\",\n      \"values\": [\"male\", \"female\", \"other\"],\n      \"path\": [\"gender\"],\n      \"message\": \"Invalid option: expected one of \\\"male\\\"|\\\"female\\\"|\\\"other\\\"\"\n    }\n  ]\n}"
             }
           ]
         },
@@ -435,7 +435,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"Authentication token missing or invalid\"\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired token\"\n}"
             }
           ]
         },
@@ -532,7 +532,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"Authentication token missing or invalid\"\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired token\"\n}"
             }
           ]
         },
@@ -666,7 +666,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    {\n      \"code\": \"too_big\",\n      \"maximum\": 120,\n      \"path\": [\"age\"],\n      \"message\": \"Age must be at most 120\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    {\n      \"origin\": \"number\",\n      \"code\": \"too_big\",\n      \"maximum\": 120,\n      \"inclusive\": true,\n      \"exact\": false,\n      \"path\": [\"age\"],\n      \"message\": \"Age must not exceed 120\"\n    }\n  ]\n}"
             }
           ]
         }

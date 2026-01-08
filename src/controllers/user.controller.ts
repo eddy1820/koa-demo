@@ -14,6 +14,11 @@ export class UserController {
 
   createUser = async (ctx: Context) => {
     try {
+      // 添加空值檢查以確保 JWT 中間件已設置 user
+      if (!ctx.state.user?.id) {
+        throw new Error('Authentication required');
+      }
+
       const accountId = ctx.state.user.id;
       const data = ctx.request.body as CreateUserInput;
       const result = await this.userService.createUser(data, accountId);
@@ -67,6 +72,11 @@ export class UserController {
 
   updateUser = async (ctx: Context) => {
     try {
+      // 添加空值檢查以確保 JWT 中間件已設置 user
+      if (!ctx.state.user?.id) {
+        throw new Error('Authentication required');
+      }
+
       const accountId = ctx.state.user.id;
       const data = ctx.request.body as UpdateUserInput;
 

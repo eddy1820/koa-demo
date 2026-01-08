@@ -35,7 +35,7 @@ export class UserRepository implements IUserRepository {
     const user = this.repository.create({
       username: data.username,
       age: data.age,
-      gender: data.gender as Gender,
+      gender: data.gender,  // 移除 'as Gender' - Zod 已驗證型別
       accountId: data.accountId,
     });
     return this.repository.save(user);
@@ -45,7 +45,7 @@ export class UserRepository implements IUserRepository {
     const updateData: Partial<User> = {};
     if (data.username !== undefined) updateData.username = data.username;
     if (data.age !== undefined) updateData.age = data.age;
-    if (data.gender !== undefined) updateData.gender = data.gender as Gender;
+    if (data.gender !== undefined) updateData.gender = data.gender;  // 移除 'as Gender'
 
     if (Object.keys(updateData).length > 0) {
       await this.repository.update(id, updateData);
